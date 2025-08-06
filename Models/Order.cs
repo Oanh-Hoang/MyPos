@@ -31,19 +31,10 @@ namespace MyPos.Models
         public int Quantity { get; set; }
     }
 
-    public class TakeAway
-    {
-        public int Id { get; set; }
-        public int OrderId { get; set; }
-        public string? Name { get; set; }
-        public string? PhoneNumber { get; set; }
-        public string? Address { get; set; }
-        
-    }
     public class OrderRequest
     {
         public int OrderType { get; set; }
-        public int CartId { get; set; }
-        public TakeAway TakeAwayInfo { get; set; }
+        public int CartId { get; set; } 
+        public List<int> SelectedCartItemIds { get; set; }
     }
 }

@@ -11,8 +11,8 @@ using MyPos.Models;
 namespace MyPos.Migrations
 {
     [DbContext(typeof(MyDbContext))]
-    [Migration("20250720104409_UpdateCategoryTable")]
-    partial class UpdateCategoryTable
+    [Migration("20250731103806_AddTableEntity")]
+    partial class AddTableEntity
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -85,10 +85,15 @@ namespace MyPos.Migrations
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int?>("TableId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TableId");
 
                     b.ToTable("Orders");
                 });
@@ -140,30 +145,19 @@ namespace MyPos.Migrations
                     b.ToTable("Products");
                 });
 
-            modelBuilder.Entity("MyPos.Models.TakeAway", b =>
+            modelBuilder.Entity("MyPos.Models.Table", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("OrderId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("PhoneNumber")
                         .IsRequired()
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");
 
-                    b.ToTable("TakeAway");
+                    b.ToTable("Table");
                 });
 
             modelBuilder.Entity("MyPos.Models.User", b =>
@@ -197,6 +191,13 @@ namespace MyPos.Migrations
                     b.Navigation("Cart");
                 });
 
+            modelBuilder.Entity("MyPos.Models.Order", b =>
+                {
+                    b.HasOne("MyPos.Models.Table", null)
+                        .WithMany("Orders")
+                        .HasForeignKey("TableId");
+                });
+
             modelBuilder.Entity("MyPos.Models.OrderItems", b =>
                 {
                     b.HasOne("MyPos.Models.Order", null)
@@ -214,6 +215,11 @@ namespace MyPos.Migrations
             modelBuilder.Entity("MyPos.Models.Order", b =>
                 {
                     b.Navigation("orderItems");
+                });
+
+            modelBuilder.Entity("MyPos.Models.Table", b =>
+                {
+                    b.Navigation("Orders");
                 });
 #pragma warning restore 612, 618
         }

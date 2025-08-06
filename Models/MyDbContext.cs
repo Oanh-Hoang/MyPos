@@ -11,8 +11,8 @@ public class MyDbContext : DbContext
     public DbSet<OrderItems> OrderItems { get; set; }
     public DbSet<Cart> Carts { get; set; }
     public DbSet<CartItem> CartItems { get; set; }
-    public DbSet<TakeAway> TakeAway { get; set; }
     public DbSet<Category> Category { get; set; }
+    public DbSet<Table> Table { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

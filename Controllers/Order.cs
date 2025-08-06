@@ -119,55 +119,44 @@ namespace MyPos.Controllers
         {
             using var context = new MyDbContext();
 
-            // Validate order type
-            if ((request.OrderType != 0 && request.OrderType != 1) || request.CartId <= 0)
-            {
-                return BadRequest("Invalid order information.");
-            }
+            var cartItems = context.CartItems
+    .Where(c => c.CartId == request.CartId && request.SelectedCartItemIds.Contains(c.Id))
+    .ToList();
 
-            // Create order
+
+            if (!cartItems.Any())
+                return BadRequest("Cart is empty");
+
+            // Step 1: Create Order
             var order = new MyPos.Models.Order
             {
-                CartId = request.CartId,
                 Type = request.OrderType,
                 OrderDate = DateTime.Now
             };
-
             context.Orders.Add(order);
-            context.SaveChanges();
-
-            // If it's Take Away, save extra info
-            if (request.OrderType == 1)
+            context.SaveChanges(); // This gives order.Id
+            
+            foreach (var item in cartItems)
             {
-                if (request.TakeAwayInfo == null ||
-                    string.IsNullOrWhiteSpace(request.TakeAwayInfo.Name) ||
-                    string.IsNullOrWhiteSpace(request.TakeAwayInfo.PhoneNumber) ||
-                    string.IsNullOrWhiteSpace(request.TakeAwayInfo.Address))
-                {
-                    return BadRequest("Take Away information is required.");
-                }
-
-                var takeAway = new TakeAway
+                var orderItem = new OrderItems
                 {
                     OrderId = order.Id,
-                    Name = request.TakeAwayInfo.Name,
-                    PhoneNumber = request.TakeAwayInfo.PhoneNumber,
-                    Address = request.TakeAwayInfo.Address
+                    ProductId = item.ProductId,
+                    Quantity = item.Quantity
                 };
-
-                context.TakeAway.Add(takeAway);
-                context.SaveChanges();
+                context.OrderItems.Add(orderItem);
             }
 
-            return Ok(new { message = "Order placed", orderId = order.Id });
+
+            // Step 3: Clear cart (optional)
+            context.CartItems.RemoveRange(cartItems);
+
+            context.SaveChanges();
+
+            return Ok(order);
         }
 
-
-
-
-
-
-        [HttpDelete("delete_order")]
+  [HttpDelete("delete_order")]
   public IActionResult DeleteOrder([FromBody] List<int> orderId)
         {
             using var context = new MyDbContext();
