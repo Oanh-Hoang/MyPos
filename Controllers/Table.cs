@@ -1,11 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using QRCoder;
+using Microsoft.AspNetCore.Mvc;
 using MyPos.Dtos;
 using MyPos.Models;
-using QRCoder;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
+
 
 namespace MyPos.Controllers
 {
@@ -42,9 +40,10 @@ namespace MyPos.Controllers
                 context.SaveChanges();
 
                 // Generate QR code after saving to get newTable.Id
-                var qrService = new QRService();
-                var frontendUrl = $"https://your-frontend-url.com/order?tableId={newTable.Id}";
-                var qrCodeBase64 = qrService.GenerateQRCodeBase64(frontendUrl);
+                
+                var frontendUrl = $"http://localhost:3000//order?tableId={newTable.Id}";
+                var qrCodeBase64 = GenerateQRCodeBase64(frontendUrl);
+
 
                 return Ok(new
                 {
@@ -53,21 +52,16 @@ namespace MyPos.Controllers
                 });
             }
         }
-    }
 
-    public class QRService
-    {
-        public string GenerateQRCodeBase64(string url)
+
+        private string GenerateQRCodeBase64(string url)
         {
-            using var qrGenerator = new QRCodeGenerator();
-            using var qrData = qrGenerator.CreateQrCode(url, QRCodeGenerator.ECCLevel.Q);
-            using var qrCode = new QRCode(qrData);
-            using var bitmap = qrCode.GetGraphic(20);
-            using var ms = new MemoryStream();
+            using var qrGenerator = new QRCoder.QRCodeGenerator();
+            using var qrData = qrGenerator.CreateQrCode(url, QRCoder.QRCodeGenerator.ECCLevel.Q);
+            var pngByteQrCode = new QRCoder.PngByteQRCode(qrData);
+            byte[] qrCodeBytes = pngByteQrCode.GetGraphic(20);
 
-            bitmap.Save(ms, ImageFormat.Png);
-            var base64 = Convert.ToBase64String(ms.ToArray());
-            return $"data:image/png;base64,{base64}";
+            return $"data:image/png;base64,{Convert.ToBase64String(qrCodeBytes)}";
         }
     }
 }
