@@ -119,24 +119,37 @@ namespace MyPos.Controllers
         {
             using var context = new MyDbContext();
 
-            var cartItems = context.CartItems
-    .Where(c => c.CartId == request.CartId && request.SelectedCartItemIds.Contains(c.Id))
-    .ToList();
+            // Step 1: Load raw cart items (needed for order & deletion)
+            var cartItemsToDelete = context.CartItems
+                .Where(c => c.CartId == request.CartId && request.SelectedCartItemIds.Contains(c.Id))
+                .ToList();
 
+            // Step 2: Join with products to get display data
+            var displayItems = (from cartItem in cartItemsToDelete
+                                join product in context.Products
+                                    on cartItem.ProductId equals product.Id
+                                select new
+                                {
+                                    ProductId = product.Id,
+                                    ProductName = product.ProductName,
+                                    Quantity = cartItem.Quantity,
+                                    Price = product.Price
+                                }).ToList();
 
-            if (!cartItems.Any())
+            if (!displayItems.Any())
                 return BadRequest("Cart is empty");
 
-            // Step 1: Create Order
+            // Step 3: Create Order
             var order = new MyPos.Models.Order
             {
                 Type = request.OrderType,
                 OrderDate = DateTime.Now
             };
             context.Orders.Add(order);
-            context.SaveChanges(); // This gives order.Id
-            
-            foreach (var item in cartItems)
+            context.SaveChanges();
+
+            // Step 4: Create order items
+            foreach (var item in displayItems)
             {
                 var orderItem = new OrderItems
                 {
@@ -147,16 +160,27 @@ namespace MyPos.Controllers
                 context.OrderItems.Add(orderItem);
             }
 
-
-            // Step 3: Clear cart (optional)
-            context.CartItems.RemoveRange(cartItems);
-
+            // Step 5: Remove from cart
+            context.CartItems.RemoveRange(cartItemsToDelete);
             context.SaveChanges();
 
-            return Ok(order);
+            // Step 6: Return summary
+            var response = displayItems.Select(item => new
+            {
+                item.ProductName,
+                item.Quantity,
+                item.Price
+            }).ToList();
+            return Ok(new
+            {
+                OrderId = order.Id,
+                OrderDate = order.OrderDate,
+                Items = response
+            });
         }
 
-  [HttpDelete("delete_order")]
+
+        [HttpDelete("delete_order")]
   public IActionResult DeleteOrder([FromBody] List<int> orderId)
         {
             using var context = new MyDbContext();
