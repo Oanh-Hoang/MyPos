@@ -16,53 +16,56 @@ namespace MyPos.Controllers
         public IActionResult AddToCart([FromBody] CartDto cartDto)
         {
             using var context = new MyDbContext();
-            foreach (var Item in cartDto.OrderProducts)
+
+            // 1. Find existing cart or create new one
+            var cart = context.Carts
+                .FirstOrDefault(c => c.Id == cartDto.CartId);
+
+            if (cart == null)
             {
-                var product = context.Products.FirstOrDefault(p => p.Id == Item.ProductId);
+                cart = new Cart
+                {
+                    UserId = 0, // <- should come from dto or JWT
+                    Items = new List<CartItem>()
+                };
+                context.Carts.Add(cart);
+                context.SaveChanges(); // Save to get cart.Id
+            }
+
+            // 2. Add / update items
+            foreach (var item in cartDto.OrderProducts)
+            {
+                var product = context.Products.FirstOrDefault(p => p.Id == item.ProductId);
                 if (product == null)
                 {
-                    return NotFound("Product not found.");
+                    return NotFound($"Product {item.ProductId} not found.");
                 }
-                var existingCartitem = context.CartItems
-                     .FirstOrDefault(ci => ci.CartId == cartDto.CartId && ci.ProductId == Item.ProductId);
-                if (existingCartitem != null)
+
+                var existingCartItem = context.CartItems
+                    .FirstOrDefault(ci => ci.CartId == cart.Id && ci.ProductId == item.ProductId);
+
+                if (existingCartItem != null)
                 {
-                    existingCartitem.Quantity += Item.Quantity;
+                    existingCartItem.Quantity += item.Quantity;
                 }
                 else
                 {
                     var newCartItem = new CartItem
                     {
-                        CartId = cartDto.CartId,
-                        ProductId = Item.ProductId,
-                        Quantity = Item.Quantity
+                        CartId = cart.Id,
+                        ProductId = item.ProductId,
+                        Quantity = item.Quantity
                     };
                     context.CartItems.Add(newCartItem);
-                    context.CartItems.Add(newCartItem);
                 }
-
-                context.SaveChanges();
             }
-            return Ok("Item added to cart successfully.");
 
-        }
-
-        [HttpPost("create_cart")]
-        public IActionResult CreateCart()
-        {
-            using var context = new MyDbContext();
-
-            var newCart = new Cart
-            {
-                UserId = 0,
-                Items = new List<CartItem>()
-            };
-
-            context.Carts.Add(newCart);
+            // 3. Save once
             context.SaveChanges();
 
-            return Ok(new { cartId = newCart.Id, message = "New cart created" });
+            return Ok(new { Message = "Item(s) added successfully", CartId = cart.Id });
         }
+
 
         [HttpGet("view_cart")]
         public IActionResult ViewCart(int cartId)
